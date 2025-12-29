@@ -415,8 +415,11 @@ Typical performance (NVIDIA A100):
 If you use PyDoseRT in your research, please cite:
 
 ```bibtex
-@article{pydosert2025,
-TODO: Fill in arxiv article
+@article{Simko2025,5
+      title={A physics-informed, plug-and-play dose engine for gradient-based radiotherapy treatment planning}, 
+      author={Attila Simkó and Matthias Kronsteiner and Simon Glatzer and Minh Vu and Josef A. Lundman and Joakim Jonsson and Jörgen Olofsson and Kristina Sandgren and Wolfgang Lechner and Dietmar Georg and Tommy Löfstedt and Tufve Nyholm and Anders Garpebring and Gerd Heilemann},
+      year={2025},
+      url={https://arxiv.org/abs/2512.18863}, 
 }
 ```
 
