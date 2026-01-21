@@ -8,46 +8,6 @@ import math
 from pydose_rt.data.beam import Beam
 import torch
 
-def resample_based_on_dose(ct_series, structures, dose):
-    
-    reference_dose = dose
-    resample = sitk.ResampleImageFilter()
-    resample.SetReferenceImage(reference_dose)
-    ct_series = resample.Execute(ct_series)
-
-    for k in structures:
-        structures[k] = resample.Execute(structures[k])
-    return ct_series, structures
-
-def resample_based_on_plan(ct_series, structures, dose, recenter, plan_path):
-    reference_dose = dose
-    reference_spacing = reference_dose.GetSpacing()
-    reference_dose_size = reference_dose.GetSize()
-    reference_origin = reference_dose.GetOrigin()
-
-
-    if recenter:
-
-        max_slice_size = np.max(reference_dose_size[0:2])
-        max_slice_size = 2 * (max_slice_size // 2)
-        reference_size = tuple(int(x) for x in [
-                max_slice_size,
-                max_slice_size,
-                2 * (reference_dose_size[2] // 2)
-            ])
-        iso_center = np.array(get_iso_from_rtplan(plan_path), dtype=np.float64)
-        # Resample CT
-        ct_series, _ = resample_to_iso_center(ct_series, iso_center, reference_spacing, reference_size, -1000)
-
-        # Resample all dose volumes
-        dose, _ = resample_to_iso_center(dose, iso_center, reference_spacing, reference_size, 0)
-
-        for k in structures:
-            structures[k], _ = resample_to_iso_center(structures[k], iso_center, reference_spacing, reference_size, 0, sitk.sitkNearestNeighbor)
-    else:
-        iso_center = reference_origin + (np.array(reference_dose_size) - 1) / 2.0 * np.array(reference_spacing) # reference_origin + np.array(reference_dose_size) / 2.0 * np.array(reference_spacing)
-    return ct_series, structures, dose, iso_center
-
 def load_ct_images(folder_path):
     """Loads all CT DICOM files from a specified folder."""
     ct_images = []
@@ -103,13 +63,6 @@ def load_ct_series(ct_folder):
     sitk_img.SetDirection(direction)
 
     return sitk_img, slices[0]
-
-def get_iso_from_rtplan(rtplan_path):
-    ds = pydicom.dcmread(rtplan_path)
-    # Assuming single beam
-    beam = ds.BeamSequence[0]
-    iso = np.array(beam.ControlPointSequence[0].IsocenterPosition, dtype=np.float32)  # [x, y, z]
-    return iso
 
 def fetch_plan_data(plan_path: str) -> str:
     """Summarizes the RTPLAN beam information in the dataset."""
@@ -250,86 +203,3 @@ def safe_get_beam_number(ds):
 
     except Exception:
         return None
-
-
-def center_crop_or_pad_to_cube(img, cube_size_mm=400.0):
-    """
-    Make the image a cube of cube_size_mm (e.g. 400 mm = 40 cm) on each side,
-    by center-cropping or padding as needed.
-    """
-    spacing = img.GetSpacing()  # (sx, sy, sz) in mm
-    current_size = img.GetSize()  # (nx, ny, nz)
-
-    # Target size in voxels for each dimension
-    target_size = [
-        int(round(cube_size_mm / s)) for s in spacing
-    ]
-
-    # ----- Step 1: center-crop if image is larger than target -----
-    crop_lower = [0, 0, 0]
-    crop_upper = [0, 0, 0]
-
-    for i in range(3):
-        diff = current_size[i] - target_size[i]
-        if diff > 0:
-            # We need to crop 'diff' voxels along this axis
-            crop_lower[i] = diff // 2
-            crop_upper[i] = diff - crop_lower[i]
-
-    if any(c > 0 for c in crop_lower + crop_upper):
-        img = sitk.Crop(img, lowerBoundaryCropSize=crop_lower,
-                             upperBoundaryCropSize=crop_upper)
-        current_size = img.GetSize()
-
-    # ----- Step 2: center-pad if image is smaller than target -----
-    pad_lower = [0, 0, 0]
-    pad_upper = [0, 0, 0]
-
-    for i in range(3):
-        diff = target_size[i] - current_size[i]
-        if diff > 0:
-            # We need to pad 'diff' voxels along this axis
-            pad_lower[i] = diff // 2
-            pad_upper[i] = diff - pad_lower[i]
-
-    if any(p > 0 for p in pad_lower + pad_upper):
-        img = sitk.ConstantPad(img,
-                               padLowerBound=pad_lower,
-                               padUpperBound=pad_upper,
-                               constant=0.0)
-
-    return img
-
-# def load_dose(path):
-#     dataset = pydicom.dcmread(path)
-
-#     scaling = float(dataset.DoseGridScaling)
-#     reader = sitk.ImageFileReader()
-#     reader.SetFileName(path)
-#     dose = reader.Execute()
-#     dose = sitk.Cast(dose, sitk.sitkFloat32)
-#     dose = scaling * dose
-#     beam_name = path.name
-
-#     # plan_sequence = dataset.ReferencedRTPlanSequence
-#     # if len(plan_sequence) == 0:
-#     #     beam_name = path.name
-#     # else:
-#     #     beam_name = plan_sequence[0].ReferencedSOPInstanceUID
-#     #     plan_sequence[0].ReferencedFractionGroupSequence[0].ReferencedBeamSequence[0].ReferencedBeamNumber
-#     return dose, beam_name
-
-
-def resample_to_iso_center(image, iso_center, spacing, size, pixel_value=0, interpolation=sitk.sitkLinear):
-    dim = image.GetDimension()
-    direction = np.eye(dim).flatten()
-
-    center_index = (np.array(size) - 1) / 2.0 # np.array(size) / 2.0
-    origin = iso_center - center_index * np.array(spacing)
-
-    ref_img = sitk.Image(size, image.GetPixelIDValue())
-    ref_img.SetSpacing(spacing)
-    ref_img.SetOrigin(origin.tolist())
-    ref_img.SetDirection(direction.tolist())
-
-    return sitk.Resample(image, ref_img, sitk.Transform(), interpolation, pixel_value), ref_img

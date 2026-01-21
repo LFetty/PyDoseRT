@@ -31,14 +31,14 @@ def get_radiological_depth_indices(input_shape, angles_rad, dtype, iso_center=No
         X, Y, Z = iso_center
         rx, ry, rz = resolution
 
-        center_z = (X - rx / 2.0) / rx  # height dimension (z in voxel coords)
-        center_y = (Y - ry / 2.0) / ry  # depth dimension (y in voxel coords)
-        center_x = (Z - rz / 2.0) / rz  # width dimension (x in voxel coords)
+        center_z = X / rx  # height dimension (z in voxel coords)
+        center_y = Y / ry  # depth dimension (y in voxel coords)
+        center_x = Z / rz  # width dimension (x in voxel coords)
     else:
         # Default to volume center if isocenter not specified
-        center_x = (W - 1) / 2.0
-        center_y = (D - 1) / 2.0
-        center_z = (H - 1) / 2.0
+        center_x = W / 2.0
+        center_y = D / 2.0
+        center_z = H / 2.0
 
     # Create a line of D points along the Y axis (depth direction)
     # This is the reference line at angle=0
@@ -158,8 +158,8 @@ def build_rotation_grids(input_shape, angles_rad, device, dtype, iso_center=None
         X, Y, Z = iso_center
         rx, ry, rz = resolution
 
-        center_y = (Y - ry / 2.0) / ry  # depth dimension (corresponds to D)
-        center_x = (Z - rz / 2.0) / rz  # width dimension (corresponds to W)
+        center_y = Y / ry  # depth dimension (corresponds to D)
+        center_x = Z / rz  # width dimension (corresponds to W)
 
         # Convert voxel coordinates to normalized coordinates [-1, 1] (for align_corners=False)
         # norm = (2 * (voxel + 0.5) / size) - 1

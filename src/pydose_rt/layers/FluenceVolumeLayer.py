@@ -96,7 +96,7 @@ class FluenceVolumeLayer(nn.Module):
         # depth coordinate is along the second axis (D)
         depths = (
             self.SID - iso_center[1]
-            + torch.arange(D, dtype=self.dtype, device=self.device) * self.resolution[1]
+            + (torch.arange(D, dtype=self.dtype, device=self.device)) * self.resolution[1]
         )  # [D], in mm
 
         # -----------------------------
@@ -104,10 +104,10 @@ class FluenceVolumeLayer(nn.Module):
         # -----------------------------
         # H: "vertical" axis, W: "horizontal" axis in CT indexing (H, D, W)
         hs = (
-            torch.arange(H, dtype=self.dtype, device=self.device) + 0.5
+            torch.arange(H, dtype=self.dtype, device=self.device)
         ) * self.resolution[0] - iso_center[0]  # [H]
         ws = (
-            torch.arange(W, dtype=self.dtype, device=self.device) + 0.5
+            torch.arange(W, dtype=self.dtype, device=self.device)
         ) * self.resolution[2] - iso_center[2]  # [W]
 
         # Meshgrid in (W, H) order to match later indexing self.sampling_grids[d][w, h, :]

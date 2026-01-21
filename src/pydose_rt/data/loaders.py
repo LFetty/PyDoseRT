@@ -7,9 +7,9 @@ import torch
 from pathlib import Path
 import numpy as np
 from pydose_rt.data.utils.dicom_utils import load_ct_series, load_structures, load_dose, fetch_plan_data
-from pydose_rt.data import Patient, BeamSequence, Beam
+from pydose_rt.data import Patient, BeamSequence
 import SimpleITK as sitk
-from typing import List, Dict, Any, Tuple, Literal
+from typing import List, Dict, Any, Tuple
 
 def load_dicom(
     ct_folder: Path,
@@ -140,7 +140,7 @@ def load_dicom(
             if dose_ref != key:
                 continue
 
-        beam_sequence.iso_center = tuple(np.array(beam_sequence.iso_center) - np.array(origin) + (np.array(resolution) / 2))
+        beam_sequence.iso_center = tuple(np.array(beam_sequence.iso_center) - np.array(origin))
         if use_delivery:
             # Convert to delivery positions and update treatment config
             beam_sequence = beam_sequence.to_delivery()
