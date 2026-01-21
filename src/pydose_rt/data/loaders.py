@@ -140,7 +140,7 @@ def load_dicom(
             if dose_ref != key:
                 continue
 
-        beam_sequence.iso_center = np.array(beam_sequence.iso_center) - np.array(origin) + (np.array(resolution) / 2)
+        beam_sequence.iso_center = tuple(np.array(beam_sequence.iso_center) - np.array(origin) + (np.array(resolution) / 2))
         if use_delivery:
             # Convert to delivery positions and update treatment config
             beam_sequence = beam_sequence.to_delivery()

@@ -143,7 +143,7 @@ class DoseEngine(nn.Module):
 
 
         self.SID = new_beam_data.sid
-        if self.iso_center is None or (self.iso_center != new_beam_data.iso_center).any():
+        if self.iso_center is None or (self.iso_center != new_beam_data.iso_center):
             initialize_fluence_volume_layer = True
             initialize_rad_depth_layer = True
             initialize_rotation_layer = True
@@ -480,7 +480,7 @@ class DoseEngine(nn.Module):
             raise Exception("Layers must be fully initialized for calibration.")
 
         center_x, _, center_z = torch.tensor(self.dose_grid_spacing) * (torch.tensor(self.dose_grid_shape) + 1) / 2
-        iso_center = (center_x, 100.0, center_z)
+        iso_center = (center_x.item(), 100.0, center_z.item())
         beam = Beam.create(0.0, self.machine_config.number_of_leaf_pairs, 0.0, (100.0, 100.0), iso_center=iso_center, device=self.device, dtype=self.dtype)
         if calibration_mu is None:
             calibration_mu = self.machine_config.calibration_mu
