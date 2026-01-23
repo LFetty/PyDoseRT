@@ -175,7 +175,7 @@ class RadiologicalDepthLayer(nn.Module):
 
                 # Convert voxel differences to physical distances
                 res_tensor = torch.tensor(
-                    [self.resolution[0], self.resolution[1], self.resolution[2]],
+                    [self.resolution[2], self.resolution[1], self.resolution[0]],
                     device=self.device, dtype=self.dtype
                 )
                 physical_diff = diff * res_tensor
