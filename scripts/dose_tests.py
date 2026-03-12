@@ -8,7 +8,7 @@ import math
 import SimpleITK as sitk
 
 from pydicom.data import get_testdata_file
-from pydose_rt.data import MachineConfig
+from pydosert.data import MachineConfig
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import zoom, rotate

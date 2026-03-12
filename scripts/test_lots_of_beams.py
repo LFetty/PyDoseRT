@@ -2,12 +2,12 @@ import os
 from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
-from pydose_rt.data import MachineConfig, Patient, OptimizationConfig, loaders
-from pydose_rt.objectives.metrics import result_validation
-from pydose_rt.utils.utils import find_patient_paths
+from pydosert.data import MachineConfig, Patient, OptimizationConfig, loaders
+from pydosert.objectives.metrics import result_validation
+from pydosert.utils.utils import find_patient_paths
 import numpy as np
-from pydose_rt import DoseEngine
-from pydose_rt.utils.plotting import print_results, make_animation, quick_plot
+from pydosert import DoseEngine
+from pydosert.utils.plotting import print_results, make_animation, quick_plot
 import torch
 
 all_results = []
@@ -29,11 +29,11 @@ for patient_name in sorted(os.listdir(base_path)):
                     struct_names=[],
                     use_delivery=False
                     )
-        optimization = OptimizationConfig.from_json("src/pydose_rt/data/optimization_presets/gold-atlas.json")
+        optimization = OptimizationConfig.from_json("src/pydosert/data/optimization_presets/gold-atlas.json")
 
         # ptv_struct_name = [key for key in patient.structures.keys() if "PTV" in key][0]
         machine_config = MachineConfig(
-            preset="src/pydose_rt/data/machine_presets/umea_10MV.json",
+            preset="src/pydosert/data/machine_presets/umea_10MV.json",
             # head_scatter_amplitude=None,
             # head_scatter_sigma=None,
             # profile_corrections=None,

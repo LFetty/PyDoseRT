@@ -1,20 +1,20 @@
 import os
 import time
-from pydose_rt.data.beam import BeamSequence
+from pydosert.data.beam import BeamSequence
 from pathlib import Path
 import pandas as pd
-from pydose_rt.data import MachineConfig, Patient, OptimizationConfig, loaders
-from pydose_rt.objectives.metrics import result_validation
-from pydose_rt.utils.utils import find_patient_paths
+from pydosert.data import MachineConfig, Patient, OptimizationConfig, loaders
+from pydosert.objectives.metrics import result_validation
+from pydosert.utils.utils import find_patient_paths
 import numpy as np
-from pydose_rt import DoseEngine
+from pydosert import DoseEngine
 from scipy.ndimage import binary_fill_holes, binary_erosion
-from pydose_rt.utils.plotting import print_results, make_animation, quick_plot, print_comparison_plot
+from pydosert.utils.plotting import print_results, make_animation, quick_plot, print_comparison_plot
 import torch
 
-optimization = OptimizationConfig.from_json("src/pydose_rt/data/optimization_presets/gold-atlas.json",)
+optimization = OptimizationConfig.from_json("src/pydosert/data/optimization_presets/gold-atlas.json",)
 machine_config = MachineConfig(
-    preset="src/pydose_rt/data/machine_presets/umea_10MV.json",
+    preset="src/pydosert/data/machine_presets/umea_10MV.json",
     # profile_corrections=None,
     # output_factors=None,
     # head_scatter_amplitude=None,

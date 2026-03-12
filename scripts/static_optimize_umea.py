@@ -8,14 +8,14 @@ import os
 import torch
 import time
 from pathlib import Path
-from pydose_rt.data import Patient, OptimizationConfig, MachineConfig, loaders, BeamSequence
-from pydose_rt import DoseEngine
-from pydose_rt.objectives.losses import compute_dvh_loss, scale_loss
-from pydose_rt.objectives.metrics import dose_at_volume_percent
-from pydose_rt.layers import BeamValidationLayer
-from pydose_rt.utils.plotting import print_results, make_animation, print_paper_plot
-from pydose_rt.objectives.metrics import result_validation
-from pydose_rt.utils.utils import get_initial_weights
+from pydosert.data import Patient, OptimizationConfig, MachineConfig, loaders, BeamSequence
+from pydosert import DoseEngine
+from pydosert.objectives.losses import compute_dvh_loss, scale_loss
+from pydosert.objectives.metrics import dose_at_volume_percent
+from pydosert.layers import BeamValidationLayer
+from pydosert.utils.plotting import print_results, make_animation, print_paper_plot
+from pydosert.objectives.metrics import result_validation
+from pydosert.utils.utils import get_initial_weights
 from dotenv import load_dotenv
 import argparse
 load_dotenv()  # will look for .env in project root
@@ -57,7 +57,7 @@ if remote:
                 struct_names=["CTVT", "PTV", "PenileBulb", "FemoralHead_L", "FemoralHead_R", "Bladder", "Rectum", "SeminalVesicles", "External"]
                 )
     beam_sequence = beam_sequence[0]
-    optimization = OptimizationConfig.from_json("src/pydose_rt/data/optimization_presets/gold-atlas.json")
+    optimization = OptimizationConfig.from_json("src/pydosert/data/optimization_presets/gold-atlas.json")
 
     kernel_size = 55
     n_tests = 50
@@ -83,7 +83,7 @@ else:
     beam_sequence: BeamSequence = beam_sequence[0]
     beam_sequence = beam_sequence.clone()[::16]
 
-    optimization = OptimizationConfig.from_json("src/pydose_rt/data/optimization_presets/gold-atlas.json")
+    optimization = OptimizationConfig.from_json("src/pydosert/data/optimization_presets/gold-atlas.json")
 
     kernel_size = 3
     n_tests = 1
@@ -95,7 +95,7 @@ else:
 
 ptv_struct_name = [key for key in patient.structures.keys() if "PTV" in key][0]
 machine_config = MachineConfig(
-    preset="src/pydose_rt/data/machine_presets/umea_10MV.json",
+    preset="src/pydosert/data/machine_presets/umea_10MV.json",
     profile_corrections=None,
     output_factors=None,
     )

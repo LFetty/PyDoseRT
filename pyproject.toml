@@ -1,7 +1,7 @@
 
 [project]
-name = "pydose_rt"
-version = "1.1.0"
+name = "pydosert"
+dynamic = ["version"]
 description = "A differentiable radiation therapy dose calculation engine for automated treatment planning, built on PyTorch."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -40,11 +40,11 @@ zip-safe = false
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["pydose_rt*"]
-exclude = ["pydose_rt.egg-info*"]
+include = ["pydosert*"]
+exclude = ["pydosert.egg-info*"]
 
 [build-system]
-requires = ["setuptools>=68.2.2"]
+requires = ["setuptools>=62", "setuptools-scm[toml]>=8"]
 build-backend = "setuptools.build_meta"
 
 [dependency-groups]
