@@ -69,6 +69,11 @@ See `pyproject.toml` for the complete dependency list.
 
 ## Quick Start
 
+### Examples
+
+Some example uses of PyDoseRT are collected on google colab for getting started:
+- [Machine parameter optimization using gradient descent](https://colab.research.google.com/drive/16OPoGrZaBbT7hrZvABb6zWW_0_PJdsoJ?usp=sharing)
+
 ### Basic Dose Calculation from DICOM Data
 
 ```python
