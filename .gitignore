@@ -1,5 +1,6 @@
 test_data/
 commissioning/data/*
+examples/data/mr_alderson/*
 build/
 out/
 dist/
