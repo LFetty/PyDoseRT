@@ -1,7 +1,6 @@
-"""Commissioning parser: water-tank scans and output factor measurements."""
+"""Minimal commissioning parser for step 1."""
 from __future__ import annotations
 
-import json
 import os
 from typing import List, Optional, Tuple, Union
 
@@ -171,112 +170,6 @@ class MeasurementParser:
                     field_y_mm=y_cm * 10.0,
                     value=value,
                 )
-            )
-
-        return measurements
-
-    @staticmethod
-    def parse_json_profiles(file_path: str) -> List[MeasuredProfile]:
-        """Parse profile/diagonal measurements from a JSON file.
-
-        Supported format:
-          {
-            "metadata": {
-              "energy": "10MV",
-              "ssd_mm": 900,
-              "source": "ASC" | "MCC"
-            },
-            "measurements": [
-              {
-                "id": 1,
-                "field_size_mm": [50, 50],
-                "depth_mm": 100.0,
-                "scan_type": "PRO" | "DIA",
-                "axis": "X" | "Y" | "D",
-                "positions": [...],
-                "doses": [...]
-              }
-            ]
-          }
-        """
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"File not found: {file_path}")
-
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        if not isinstance(data, dict):
-            raise ValueError(f"Expected JSON object in {file_path}")
-
-        metadata = data.get("metadata", {})
-        measurements_data = data.get("measurements", [])
-
-        if not isinstance(measurements_data, list):
-            raise ValueError(f"Expected 'measurements' to be a list in {file_path}")
-
-        profiles: List[MeasuredProfile] = []
-        for entry in measurements_data:
-            try:
-                profile = MeasuredProfile(
-                    id=int(entry.get("id", 0)),
-                    field_size_mm=tuple(entry["field_size_mm"]),
-                    depth_mm=entry.get("depth_mm"),
-                    ssd_mm=float(entry.get("ssd_mm", metadata.get("ssd_mm", 1000))),
-                    energy=str(entry.get("energy", metadata.get("energy", "6MV"))),
-                    scan_type=str(entry.get("scan_type", "PRO")),
-                    axis=str(entry.get("axis", "X")),
-                    position_mm=np.array(entry["positions"], dtype=float),
-                    dose_values=np.array(entry["doses"], dtype=float),
-                )
-                profiles.append(profile)
-            except (KeyError, TypeError, ValueError) as e:
-                print(f"Warning: skipping measurement due to error: {e}")
-                continue
-
-        return profiles
-
-    @staticmethod
-    def parse_output_factors_json(file_path: str) -> List[OutputFactorMeasurement]:
-        """Parse output factor measurements from a JSON file.
-
-        Supported formats:
-          - List of objects with ``field_x_mm``, ``field_y_mm``, and one of:
-            ``output_factor``, ``value``, or ``sp`` (in that priority order).
-          - Object with a top-level ``"measurements"`` or ``"output_factors"`` 
-            list using the same per-entry schema.
-        """
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"File not found: {file_path}")
-
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        # Unwrap optional top-level key
-        if isinstance(data, dict):
-            # Try different top-level keys in priority order
-            data = data.get("measurements", data.get("output_factors", data))
-
-        if not isinstance(data, list):
-            raise ValueError(
-                f"Expected a JSON list (or dict with 'measurements'/'output_factors' list) in {file_path}"
-            )
-
-        measurements: List[OutputFactorMeasurement] = []
-        for entry in data:
-            try:
-                fx = float(entry["field_x_mm"])
-                fy = float(entry["field_y_mm"])
-                # Accept "output_factor", "value", or "sp" in that priority order
-                value = float(
-                    entry.get(
-                        "output_factor",
-                        entry.get("value", entry.get("sp", 1.0))
-                    )
-                )
-            except (KeyError, TypeError, ValueError):
-                continue
-            measurements.append(
-                OutputFactorMeasurement(field_x_mm=fx, field_y_mm=fy, value=value)
             )
 
         return measurements
