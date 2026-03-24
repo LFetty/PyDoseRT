@@ -14,7 +14,7 @@ import os
 import sys
 from typing import Any, Dict, List
 
-from convert_mcc_to_asc import (
+from commissioning.conversion.convert_mcc_to_asc import (
     MccScan,
     collect_mcc_scans,
     mcc_scan_to_xyzd,

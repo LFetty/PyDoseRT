@@ -15,15 +15,14 @@ from toolkit.commissioning_parser import MeasurementParser
 from toolkit.commissioning_toolkit import CommissioningToolkit
 from toolkit.commissioning_plotter import CommissioningPlotter
 
-
 # ---------------------------------------------------------------------------
 # Input files - .json is expected. To convert raw data, there are functions 
 # `convert_asc_to_json`, `convert_mcc_to_json`, `convert_of_csv_to_json`.
 # ---------------------------------------------------------------------------
-BASE_CONFIG         = "commissioning/machine_config_base_umea.json"
-PROFILES_FILE       = "commissioning/data/umea/measurements_10_profiles.json"
-DIAGONALS_FILE      = "commissioning/data/umea/measurements_10_diagonals.json"
-OUTPUT_FACTORS_FILE = "commissioning/data/umea/measurements_10_of_sp.json"
+BASE_CONFIG         = "commissioning/machine_config_base_varian.json"
+PROFILES_FILE       = "commissioning/data/umea/profiles_10MV.json"
+DIAGONALS_FILE      = "commissioning/data/umea/diagonals_10MV.json"
+OUTPUT_FACTORS_FILE = "commissioning/data/umea/output_factors_10MV.json"
 
 # ---------------------------------------------------------------------------
 # Output
