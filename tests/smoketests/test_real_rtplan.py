@@ -37,7 +37,7 @@ def test_real_rtplan(rtp_data_dir, rtp_struct_path, rtp_dose_path, rtp_plan_path
     patient = patient.to(device).to(dtype)
     beam_sequence = beam_sequence.to(device).to(dtype)
 
-    machine_config = MachineConfig(preset="src/pydosert/data/machine_presets/varian_10MV.json")
+    machine_config = MachineConfig(preset="varian_10MV")
         
     ct_volume = patient.get_masked_ct("External").unsqueeze(0)
     dose_target = patient.get_masked_dose("External").cpu().detach().numpy()
@@ -48,7 +48,7 @@ def test_real_rtplan(rtp_data_dir, rtp_struct_path, rtp_dose_path, rtp_plan_path
                             dose_grid_shape=patient.density_image.shape, 
                             beam_template=beam_sequence)
 
-    dose_pred = dose_layer.compute_dose_sequential(beam_sequence, density_image=ct_volume)
+    dose_pred = dose_layer.compute_dose(beam_sequence, density_image=ct_volume, beam_chunk_size=1)
     dose_pred = torch.where(patient.structures["External"], dose_pred[0], 0.0)
     dose_pred = dose_pred.cpu().detach().numpy()
 

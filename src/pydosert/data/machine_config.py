@@ -1,11 +1,63 @@
 import json
+from importlib import resources
 from pathlib import Path
-from pydantic import Field, computed_field, model_validator
-from pydantic_settings import SettingsConfigDict, BaseSettings
-import numpy as np
+from pydantic import Field, model_validator
+from pydantic_settings import BaseSettings
 from typing import Any, Optional
 
+
+def list_machine_presets() -> list[str]:
+    """Return the names of all built-in machine presets (without .json extension)."""
+    preset_dir = resources.files("pydosert.data").joinpath("machine_presets")
+    return sorted(
+        p.name[:-5]  # strip .json
+        for p in preset_dir.iterdir()
+        if p.name.endswith(".json")
+    )
+
 class MachineConfig(BaseSettings):
+    """
+    Linac/MLC machine parameters used by the dose engine.
+    A pydantic ``BaseSettings`` model: fields can be supplied as kwargs, via
+    environment variables, or merged from a named JSON preset (see ``preset``).
+    Each field's meaning and units are given in its ``Field`` description; a
+    summary of the key fields:
+    Attributes:
+        preset (Optional[str]): Name/path of a preset whose values are merged
+            before validation (explicit kwargs and env vars take precedence).
+        tpr_20_10 (float): Tissue phantom ratio TPR20/10 (dimensionless).
+        number_of_leaf_pairs (int): Number of MLC leaf pairs (N).
+        minimum_leaf_opening (float): Minimum MLC leaf-pair opening (mm).
+        minimum_jaw_opening (float): Minimum jaw opening (mm).
+        maximum_leaf_tip_overlap (float): Maximum opposing-leaf tip overlap (mm).
+        maximum_jaw_speed (float): Maximum jaw speed (mm/s).
+        maximum_leaf_speed (float): Maximum leaf speed (mm/s).
+        minimum_gantry_angle_speed (float): Minimum gantry rotation speed (deg/s).
+        maximum_gantry_angle_speed (float): Maximum gantry rotation speed (deg/s).
+        maximum_gantry_angle_speed_variation (float): Max gantry speed variation (deg/s).
+        minimum_dose_rate (float): Minimum dynamic-arc dose rate (MU/s).
+        maximum_dose_rate (float): Maximum dynamic-arc dose rate (MU/s).
+        mlc_transmission (float): Closed-MLC transmission as a fraction of open fluence.
+        penumbra_fwhm (Optional[list[float]]): Penumbra FWHM (mm); one value, or two
+            for the MLC and jaw directions respectively.
+        head_scatter_amplitude (Optional[list[float]]): Head-scatter amplitude as a
+            fraction of dose; one value or two (MLC, jaw directions).
+        head_scatter_sigma (Optional[list[float]]): Head-scatter Gaussian sigma (mm).
+        head_scatter_ssd_mm (float): Source-to-scatter-source distance (mm).
+        calibration_mu (float): MU value for dose calibration in water.
+        mean_photon_energy_MeV (float): Mean photon energy (MeV).
+        leaf_widths (Optional[list[float]]): Per-leaf widths (mm), length N.
+        profile_corrections (Optional[list[list[float]]]): Off-axis correction data
+            as [distances_mm, correction_ratios].
+        output_factors (Optional[list[list[float]]]): Output-factor LUT data as
+            [distances_mm, correction_ratios].
+        dlg_mm (Optional[float]): Dosimetric leaf gap (mm); each MLC bank is shifted
+            outward by half this value.
+        sc_source_sigma_mm (Optional[list[float]]): Effective source sigma at
+            isocentre (mm) for the analytical Sc collimator-scatter model; one
+            isotropic value or two [sigma_x_mm, sigma_y_mm].
+    """
+
     preset: Optional[str] = Field(
         default=None,
         description="Optional preset name whose values are merged before validation.",
@@ -108,20 +160,41 @@ class MachineConfig(BaseSettings):
 
     
     @staticmethod
-    def _load_preset_json(path_str: str) -> dict[str, Any]:
+    def _load_preset_json(name_or_path: str) -> dict[str, Any]:
         """
-        Read presets/{name}.json and return its dict. Raise a nice error if missing.
+        Load a preset by name or file path.
+
+        - If ``name_or_path`` is an existing file, load it directly.
+        - Otherwise treat it as a built-in preset name (with or without
+          the ``.json`` extension) and load from the bundled package data.
+          This works both during development and after ``pip install``.
+        
+        Args:
+            name_or_path (str): Filesystem path to a JSON file, or a built-in
+                preset name (``.json`` extension optional).
+        Returns:
+            dict[str, Any]: The decoded JSON object of preset field values.
         """
-        path = Path(path_str)
-        name = path.stem
-        if not path.is_file():
-            raise ValueError(
-                f"Unknown preset '{name}' at path '{path}'. "
-            )
-        with path.open("r", encoding="utf-8") as f:
-            data = json.load(f)
+        path = Path(name_or_path)
+        if path.is_file():
+            with path.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+        else:
+            # Resolve as a built-in preset name
+            stem = path.stem  # strips .json if present
+            filename = stem + ".json"
+            try:
+                preset_file = resources.files("pydosert.data").joinpath("machine_presets").joinpath(filename)
+                data = json.loads(preset_file.read_text(encoding="utf-8"))
+            except (FileNotFoundError, TypeError):
+                available = list_machine_presets()
+                raise ValueError(
+                    f"Unknown machine preset '{stem}'. "
+                    f"Available built-in presets: {available}. "
+                    "You can also pass an absolute path to a custom JSON file."
+                )
         if not isinstance(data, dict):
-            raise ValueError(f"Preset file '{path}' must contain a JSON object at the top level.")
+            raise ValueError(f"Preset '{name_or_path}' must contain a JSON object at the top level.")
         return data
 
     @model_validator(mode="before")
@@ -135,6 +208,13 @@ class MachineConfig(BaseSettings):
             2) Environment variables (handled by BaseSettings later)
             3) Preset values (from presets/{name}.json)
             4) Field defaults
+
+        Args:
+            data (Any): Raw input passed to the validator; only acted upon when it
+                is a dict containing a non-empty ``preset`` key.
+        Returns:
+            Any: ``data`` unchanged, or a dict of preset values merged under the
+                explicit input values.
         """
         if not isinstance(data, dict):
             # nothing to do if the source isn’t a dict (pydantic internals)

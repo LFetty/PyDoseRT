@@ -35,11 +35,16 @@ class RadiologicalDepthLayer(nn.Module):
     depth profiles for dose calculation.
 
     Attributes:
-        config (MachineConfig): Configuration object containing CT array shape, gantry angles and resolution.
+        machine_config (MachineConfig): Configuration object containing machine parameters.
         verbose (bool): Flag to enable verbose logging.
         device (torch.device): Device on which computations are performed (CPU or CUDA).
-        stacked_indices (torch.Tensor): Precomputed indices for sampling CT volume along rotated lines for each gantry angle.
-
+        dtype (torch.dtype): Data type for tensors.
+        ct_array_shape (tuple[float, float, float]): Shape of the CT array as (H, D, W) in voxels.
+        target_ct_shape (tuple[float, float, float]): Target CT shape, equal to ct_array_shape.
+        resolution (tuple[float, float, float]): Voxel spacing in mm (rH, rD, rW).
+        iso_center (tuple[float, float, float]): Isocenter position in mm.
+        stacked_indices (torch.Tensor): Precomputed [x, y, z] = [W, D, H] sampling coordinates along
+            the rotated ray for each gantry angle, shape [1, G, P, 3] (P sample points per ray).
     """
 
     def __init__(self, 
@@ -57,10 +62,11 @@ class RadiologicalDepthLayer(nn.Module):
         Args:
             machine_config (MachineConfig): Configuration object with machine parameters.
             resolution (tuple[float, float, float]): Voxel spacing in mm.
-            ct_array_shape (tuple[float, float, float]): Shape of the CT array.
-            gantry_angles (list[float]): List of gantry angles in radians.
-            device (torch.device): Device for computation (CPU or CUDA).
-            dtype (type): Data type for tensors.
+            ct_array_shape (tuple[float, float, float]): Shape of the CT array as (H, D, W) in voxels.
+            gantry_angles (list[float]): List of G gantry angles in radians.
+            iso_center (tuple[float, float, float]): Isocenter position in mm.
+            device (torch.device | str | None, optional): Device for computation. Defaults to CUDA if available, else CPU.
+            dtype (torch.dtype, optional): Data type for tensors. Defaults to torch.float32.
             verbose (bool, optional): If True, enables verbose output. Defaults to False.
         """
         super(RadiologicalDepthLayer, self).__init__()
@@ -95,11 +101,11 @@ class RadiologicalDepthLayer(nn.Module):
         Computes radiological depth profiles through the CT volume for each gantry angle.
 
         Args:
-            ct_stack (torch.Tensor): CT volume tensor of shape [B, H, D, W].
+            ct_stack (torch.Tensor): CT density volume of shape [B, H, D, W].
 
         Returns:
-            torch.Tensor: Radiological depth profiles of shape [B*G, P_target, 1], where
-            P_target is the number of points in the depth profile.
+            torch.Tensor: Cumulative radiological depth profiles of shape [B*G, P, 1], where
+            P is the number of sample points along each ray (from stacked_indices [1, G, P, 3]).
         """
         with torch.no_grad():
             B, H, D, W = ct_stack.shape
@@ -116,8 +122,18 @@ class RadiologicalDepthLayer(nn.Module):
             y_coords = coords[..., 1]  # D dimension [B, G, P]
             z_coords = coords[..., 2]  # H dimension [B, G, P]
 
-            # Perform trilinear interpolation manually
-            # Clamp coordinates to valid range
+            # Mask points that fall outside the CT volume so they contribute
+            # zero density (treated as air). Clamping instead of masking causes
+            # out-of-bounds ray points to sample the boundary voxel, which
+            # double-counts edge density for rays entering near the far face
+            # of the volume and shifts the radiological depth at entry.
+            in_bounds = (
+                (x_coords >= 0) & (x_coords <= W - 1)
+                & (y_coords >= 0) & (y_coords <= D - 1)
+                & (z_coords >= 0) & (z_coords <= H - 1)
+            )
+
+            # Clamp coordinates so the subsequent gather indexing stays valid.
             x_coords = torch.clamp(x_coords, 0, W - 1)
             y_coords = torch.clamp(y_coords, 0, D - 1)
             z_coords = torch.clamp(z_coords, 0, H - 1)
@@ -159,6 +175,9 @@ class RadiologicalDepthLayer(nn.Module):
             c1 = c10 * (1 - yd) + c11 * yd
 
             density = c0 * (1 - zd) + c1 * zd  # [B, G, P]
+
+            # Zero out density for ray points outside the CT (air).
+            density = density * in_bounds.to(density.dtype)
 
             # Calculate physical step size per angle (accounts for anisotropic voxels)
             if P > 1:
